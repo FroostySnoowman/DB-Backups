@@ -1,0 +1,13 @@
+DBS:
+    - DB_1:
+        Host: ""
+        Database: ""
+        Username: ""
+        Password: ""
+        Port: 3306
+    - DB_2:
+        Host: ""
+        Database: ""
+        Username: ""
+        Password: ""
+        Port: 3306
