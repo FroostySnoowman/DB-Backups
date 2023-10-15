@@ -17,7 +17,8 @@ SET time_zone = "+00:00";
 async def export_databases(config, output_path):
     now = datetime.now()
 
-    folder_name = now.strftime("%m-%d-%y %H")
+    name = now.strftime("%m-%d-%y %H")
+    folder_name = f"{name}:00"
     folder_path = os.path.join(output_path, folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
@@ -62,15 +63,13 @@ async def main():
             print(exc)
 
 async def run_at_top_of_hour():
-    now = datetime.now()
-    next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-    seconds_until_next_hour = (next_hour - now).total_seconds()
-    await asyncio.sleep(seconds_until_next_hour)
-    await main()
+    while True:
+        now = datetime.now()
+        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        seconds_until_next_hour = (next_hour - now).total_seconds()
+        await asyncio.sleep(seconds_until_next_hour)
+        await main()
 
 if __name__ == "__main__":
     print("Script has started running!")
     asyncio.run(run_at_top_of_hour())
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
