@@ -1,8 +1,6 @@
 import aiomysql
-import schedule
 import asyncio
 import yaml
-import time
 import os
 from datetime import datetime, timedelta
 
@@ -17,10 +15,14 @@ SET time_zone = "+00:00";
 async def export_databases(config, output_path):
     now = datetime.now()
 
-    name = now.strftime("%m-%d-%y %H")
-    folder_name = f"{name}:00"
-    folder_path = os.path.join(output_path, folder_name)
-    os.makedirs(folder_path, exist_ok=True)
+    date_folder_name = now.strftime("%m-%d-%y")
+    hour_folder_name = now.strftime("%m-%d-%y %H:00")
+
+    date_folder_path = os.path.join(output_path, date_folder_name)
+    os.makedirs(date_folder_path, exist_ok=True)
+
+    hour_folder_path = os.path.join(date_folder_path, hour_folder_name)
+    os.makedirs(hour_folder_path, exist_ok=True)
 
     counter = 1
 
@@ -48,17 +50,41 @@ async def export_databases(config, output_path):
 
                 dump_content += "\nCOMMIT;"
 
-                with open(f"{folder_path}/{db[db_structure]['Database']}.sql", 'w') as f:
+                with open(f"{hour_folder_path}/{db[db_structure]['Database']}.sql", 'w') as f:
                     f.write(dump_content)
         counter += 1
+
+async def delete_old_backups(config, output_path):
+    now = datetime.now()
+    for root, dirs, files in os.walk(output_path):
+        for directory in dirs:
+            dir_parts = directory.split(' ')
+            if len(dir_parts) >= 2:
+                date_str = dir_parts[0]
+                hour_str = dir_parts[1].split(':')[0]
+                try:
+                    folder_date = datetime.strptime(date_str, "%m-%d-%y")
+                    folder_date_with_hour = folder_date.replace(hour=int(hour_str), minute=0)
+                    if (now - folder_date_with_hour) > timedelta(days=config["Delete_Backups_After_Days"]):
+                        folder_path = os.path.join(root, directory)
+                        for file in os.listdir(folder_path):
+                            file_path = os.path.join(folder_path, file)
+                            os.remove(file_path)
+                        if not os.listdir(folder_path):
+                            os.rmdir(folder_path)
+                except ValueError as e:
+                    print(f"Error processing directory: {directory}. {e}")
 
 async def main():
     with open('config.yml', 'r') as stream:
         try:
             config = yaml.safe_load(stream)
-            output_directory = 'dbs'
+            output_directory = "dbs"
             await export_databases(config, output_directory)
-            print('Export complete.')
+            await delete_old_backups(config, output_directory)
+            now = datetime.now()
+            time = now.strftime("%m-%d-%y %H")
+            print(f"{time} - Export complete.")
         except yaml.YAMLError as exc:
             print(exc)
 
