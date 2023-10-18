@@ -1,3 +1,5 @@
+Delete_Backups_After_Days: 7
+
 DBS:
     - DB_1:
         Host: ""
